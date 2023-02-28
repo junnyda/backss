@@ -1,0 +1,98 @@
+buildscript {
+   ext {
+      queryDslVersion = "5.0.0"
+   }
+}
+
+plugins {
+
+	id 'java'
+	id 'org.springframework.boot' version '2.7.8'
+	id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+	id 'com.github.node-gradle.node' version '2.2.3'
+    id 'com.ewerk.gradle.plugins.querydsl' version '1.0.10' 
+}
+
+group = 'io.lcalmsky'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '17'
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity5'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	compileOnly 'org.projectlombok:lombok'
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	
+	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
+	
+	//db
+	runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'org.postgresql:postgresql'
+	
+	
+	testImplementation 'com.tngtech.archunit:archunit-junit5-api:0.23.1'
+	
+	implementation "com.querydsl:querydsl-jpa:${queryDslVersion}"
+    implementation "com.querydsl:querydsl-apt:${queryDslVersion}"
+
+}
+
+node {
+    version = '16.9.1'
+    download = true
+    nodeModulesDir = file("${projectDir}/src/main/resources/static")
+}
+
+task copyFrontLib(type: Copy) {
+    from "${projectDir}/src/main/resources/static"
+    into "${projectDir}/build/resources/main/static/."
+}
+
+copyFrontLib.dependsOn npmInstall
+compileJava.dependsOn copyFrontLib
+
+
+
+//querydsl 추가 시작
+def querydslDir = "$buildDir/generated/querydsl"
+
+querydsl {
+   jpa = true
+   querydslSourcesDir = querydslDir
+}
+sourceSets {
+   main.java.srcDir querydslDir
+}
+compileQuerydsl{
+   options.annotationProcessorPath = configurations.querydsl
+}
+configurations {
+   compileOnly {
+      extendsFrom annotationProcessor
+   }
+   querydsl.extendsFrom compileClasspath
+}
+//querydsl 추가 끝
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
